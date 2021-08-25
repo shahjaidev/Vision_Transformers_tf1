@@ -91,6 +91,7 @@ if __name__ == "__main__":
     model = VisionTransformer(
         image_size= IMAGE_SIZE,
         patch_size=PATCH_SIZE,
+        patch_stride= PATCH_SIZE,
         num_layers=NUMBER_OF_LAYERS,
         num_classes=NUMBER_OF_CLASSES,
         embedding_dim=EMBEDDING_DIM,

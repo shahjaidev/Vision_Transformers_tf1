@@ -1,6 +1,6 @@
 import os
 from argparse import ArgumentParser
-#import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
 import tensorflow as tf
 import os
@@ -17,7 +17,7 @@ from new_data_augmentations import random_hue_saturation, random_brightness_cont
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-#Run on GPU1
+#Set GPU Device
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
@@ -27,6 +27,7 @@ if __name__ == "__main__":
     IMAGE_SIZE= 32
     NUMBER_OF_CLASSES= 100
     PATCH_SIZE= 4
+    PATCH_STRIDE= PATCH_SIZE
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=64
     NUM_HEADS= 4
@@ -39,23 +40,20 @@ if __name__ == "__main__":
 
     (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar100.load_data()
     X_train, X_validate, y_train, y_validate = train_test_split(X_train, y_train, test_size=0.15, shuffle=True)
-    X_train_aug=list()
-
+    
+    #Preprocessing: Random Rotation and shear augmentations to double dataset size
     X_train_aug=list()
     for img in X_train:
         img_aug = tf.keras.preprocessing.image.random_rotation(img, 20, row_axis=0, col_axis=1, channel_axis=2)
         img_aug = tf.keras.preprocessing.image.random_shear(img, 25, row_axis=0, col_axis=1, channel_axis=2)
         X_train_aug.append(img_aug)
-
-
-    #print(X_train_aug)
-
+    
     X_train_aug= np.asarray(X_train_aug)
 
     X_train= np.concatenate((X_train, X_train_aug), axis=0)
     y_train= np.concatenate((y_train, y_train), axis=0)
 
-
+    #Creating TF Datasets as the first step in our data pipeline
     train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
     validation_dataset = tf.data.Dataset.from_tensor_slices((X_validate, y_validate))
     test_dataset = tf.data.Dataset.from_tensor_slices((X_test, y_test))
@@ -67,9 +65,8 @@ if __name__ == "__main__":
     validation_dataset = validation_dataset.map(cast_to_float)
 
     def get_train_dataset(train_dataset):
-
+        """ Shuffles and augments train_dataset. Also caches and prefetches batches to reduce CPU data loading bottleneck"""
         train_dataset= train_dataset.shuffle(10000, reshuffle_each_iteration= True)
-
         augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, rotate_20, rotate_30,flip_horizontal, flip_vertical]
         for aug in augmentations:
             train_dataset = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.86, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
@@ -77,7 +74,6 @@ if __name__ == "__main__":
         train_dataset= train_dataset.cache()
         train_dataset=train_dataset.batch(BATCH_SIZE)
         train_dataset=train_dataset.prefetch(AUTOTUNE)
-        
         return train_dataset
 
 
@@ -99,7 +95,7 @@ if __name__ == "__main__":
         mlp_dim_l1=MLP_DIM_L1,
         mlp_dim_l2=MLP_DIM_L2,
         channels=3,
-        dropout=0.25,
+        dropout=0.20,
     )
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -111,8 +107,8 @@ if __name__ == "__main__":
         run_eagerly=True,
     )
     
-file_path= './saved_models/Model_tf1_cifar100_aug_rotate'
-checkpoint = ModelCheckpoint(file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
+model_file_path= './saved_models/Model_tf1_cifar100_augmentations'
+checkpoint = ModelCheckpoint(model_file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
 reduce_on_plateau = ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002)
 callbacks_list = [checkpoint, reduce_on_plateau]
                  
@@ -124,6 +120,5 @@ model.fit(
 )
 
 #Compute Metrics on Test Set
-
 test_metrics= model.evaluate(X_test, y_test, 32)
 print(test_metrics)

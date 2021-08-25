@@ -7,15 +7,17 @@ from tensorflow.keras.layers import (
     Dropout,
     LayerNormalization,
 )
-#from tensorflow.keras.layers.experimental.preprocessing import Rescaling
 
 def Rescale(input, scale, offset=0):
+    """Rescaling helper function to scale image elements down to the range [0,1]"""
     dtype = tf.float32
     scale = tf.cast(scale, dtype)
     offset = tf.cast(offset, dtype)
     return tf.cast(input, dtype) * scale + offset
 
 def gelu(x):
+    """ The GELU Activation function: defined as x*CDF(x) for the Standard Normal(0,1) Distribution"""
+
     return 0.5 * x * (1.0 + tf.math.erf(x / tf.cast(tf.sqrt(2.0), x.dtype)))
 
 class MultiHeadSelfAttention(tf.keras.layers.Layer):
@@ -82,11 +84,13 @@ class TransformerBlock(tf.keras.layers.Layer):
         attn_output = self.att(inputs_norm)
         attn_output = self.dropout1(attn_output, training=training)
         out1 = attn_output + inputs
+        #Skip Connection: Adding inputs to the attn_output 
 
         out1_norm = self.layernorm2(out1)
         mlp_output = self.mlp(out1_norm)
         mlp_output = self.dropout2(mlp_output, training=training)
-        return mlp_output + out1
+        return mlp_output + out1 
+        #Skip Connection: Adding out1 to the final output mlp_output 
 
 
 class VisionTransformer(tf.keras.Model):
@@ -94,6 +98,7 @@ class VisionTransformer(tf.keras.Model):
         self,
         image_size,
         patch_size,
+        patch_stride,
         num_layers,
         num_classes,
         embedding_dim,
@@ -105,16 +110,16 @@ class VisionTransformer(tf.keras.Model):
     ):
         super(VisionTransformer, self).__init__()
         num_patches = (image_size // patch_size) ** 2
-        #72/6 **2 = 144
-
-        #3*6*6= 108
+        #The number of patches is analagous to the number of words in a sequence being fed to a transformer. The image patches are flattened and transformed to a lower dimensional embedding space (embedding dim) 
         self.patch_dim = channels * (patch_size ** 2)
+        #Flatting the path results in a path_dim dimensional vector. For patch_size =4, this is 3*4*4 = 48 dimensional
 
         self.patch_size = patch_size
+        self.patch_stride= patch_stride
         self.embedding_dim = embedding_dim
         self.num_layers = num_layers
 
-        #Adding learnable Positional Encoding embedding weights to the model class
+        #Adding learnable Positional Encoding embedding weights to the model class. A positional embedding learns to represent the position of each specific patch number of the image
         self.pos_emb = self.add_weight( "pos_emb", shape=(1, num_patches + 1, embedding_dim))
 
         #Adding learnable classification embedding weights to the model class
@@ -126,7 +131,7 @@ class VisionTransformer(tf.keras.Model):
                 LayerNormalization(epsilon=1e-6),
                 Dense(mlp_dim_l1, activation=gelu),
                 Dropout(dropout),
-                Dense(mlp_dim_l2, activation='relu'),
+                Dense(mlp_dim_l2, activation=gelu),
                 Dense(num_classes),
             ]
         )
@@ -136,7 +141,7 @@ class VisionTransformer(tf.keras.Model):
         patches = tf.image.extract_patches(
             images=images,
             sizes=[1, self.patch_size, self.patch_size, 1],
-            strides=[1, self.patch_size, self.patch_size, 1],
+            strides=[1, self.patch_stride, self.patch_stride, 1],
             rates=[1, 1, 1, 1],
             padding="VALID",
         )
@@ -146,16 +151,24 @@ class VisionTransformer(tf.keras.Model):
     def call(self, x, training):
         batch_size = tf.shape(x)[0]
         x = Rescale(x, 1.0 / 255.0)
+        #Image elements are scaled by 1/255 so that each element of the image x is now between 0 and 1 
 
         patches = self.extract_patches(x)
+        #Extract patches using specified patch_size and patch_stride parameters, and return flatten patches of shape [batch_size, number of patches, self.patch_dim]
+
         x = self.patch_proj(patches)
+        #Flattened Patches are projected down to (embedding_dim) sized embeddings
+
         classification_emb = tf.broadcast_to( self.class_emb, [batch_size, 1, self.embedding_dim])
         x = tf.concat([classification_emb, x], axis=1)
+        #Concatenating the classification embedding to the patch_embeddings such that x now has (patches+1) embeddings along axis 1
+
         x = x + self.pos_emb
+        # the positional embeddings are added to the patch embeddings. The patch embeddings within now also have positional information encoded
 
         for layer in self.enc_layers:
             x = layer(x, training)
 
-        # First (class token) is used for classification
         x = self.mlp_head(x[:, 0])
+        #We use the first token from the outputs of the last transformer block as this is the Classification token
         return x
