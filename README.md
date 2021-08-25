@@ -2,6 +2,7 @@
 
 
 # Requirements:
+
 tensorflow 1.15  :If using CUDA, recommended approach is to install tf2, followed by import tensorflow.compat.v1 as tf, tf.disable_v2_behavior() and tf.enable_eager_execution()
 sklearn
 numpy
