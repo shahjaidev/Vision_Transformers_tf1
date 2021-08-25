@@ -1,4 +1,4 @@
-# Vision Transformers with Tensorflow Direct-ML (Tensorflow 1.15)
+# Vision Transformer (ViT) with Tensorflow Direct-ML (Tensorflow 1.15)
 
 # To run using Tensorflow-DirectML
 
