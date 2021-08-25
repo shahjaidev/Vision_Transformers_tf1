@@ -16,12 +16,13 @@ from new_data_augmentations import random_hue_saturation, random_brightness_cont
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-#Run on GPU1
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+#Run on GPU0
+os.environ["DML_VISIBLE_DEVICES"] = "0"
 
 if __name__ == "__main__":
     
-    tf.enable_eager_execution()
+    tf.debugging.set_log_device_placement(True) 
+    tf.enable_eager_execution() 
 
     IMAGE_SIZE= 32
     NUMBER_OF_CLASSES= 10
