@@ -1,4 +1,4 @@
-# Vision_Transformers_tf1
+# Vision Transformers with Tensorflow Direct-ML (Tensorflow 1.15)
 
 # To run using Tensorflow-DirectML
 
