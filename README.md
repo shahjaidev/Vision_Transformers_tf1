@@ -1,24 +1,26 @@
 # Vision_Transformers_tf1
 
 
-Requirements:
+# Requirements:
 tensorflow 1.15  :If using CUDA, recommended approach is to install tf2, followed by import tensorflow.compat.v1 as tf, tf.disable_v2_behavior() and tf.enable_eager_execution()
 sklearn
 numpy
 
 
-To train on Cifar 10:
+# To train on Cifar 10:
 
 python train_tf1_cifar10_aug.py
 
 
-To train on Cifar 100:
-
+# To train on Cifar 100:
 python train_tf1_cifar100_aug.py
 
 
-Recommended Hyper-parameters:
+
+# Recommended Hyper-parameters:
+
     IMAGE_SIZE= 32
+    
     NUMBER_OF_CLASSES= 10
     PATCH_SIZE= 4
     NUMBER_OF_LAYERS=8
