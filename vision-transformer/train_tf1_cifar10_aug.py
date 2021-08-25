@@ -29,36 +29,31 @@ if __name__ == "__main__":
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=64
     NUM_HEADS= 8
-    MLP_DIM_L1= 1024
-    MLP_DIM_L2= 512
+    MLP_DIM_L1= 256
+    MLP_DIM_L2= 128
     LEARNING_RATE= 0.001 #3e-4
-    BATCH_SIZE= 128
+    BATCH_SIZE= 256
     EPOCHS= 100#300
-    PATIENCE= 10
+    PATIENCE= 6
 
     (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
     X_train, X_validate, y_train, y_validate = train_test_split(X_train, y_train, test_size=0.15, shuffle=True)
-
-    X_train= tf.image.resize(X_train, [72,72], method=tf.image.ResizeMethod.BILINEAR)
     X_train_aug=list()
 
     X_train_aug=list()
     for img in X_train:
-        img_aug = tf.keras.preprocessing.image.random_rotation(img.numpy(), 20, row_axis=0, col_axis=1, channel_axis=2)
-        img_aug = tf.keras.preprocessing.image.random_shear(img.numpy(), 25, row_axis=0, col_axis=1, channel_axis=2)
+        img_aug = tf.keras.preprocessing.image.random_rotation(img, 20, row_axis=0, col_axis=1, channel_axis=2)
+        img_aug = tf.keras.preprocessing.image.random_shear(img, 25, row_axis=0, col_axis=1, channel_axis=2)
         X_train_aug.append(img_aug)
 
 
-    print(X_train_aug)
+    #print(X_train_aug)
 
-    datagen = ImageDataGenerator(
-    rotation_range=20,
-    zoom_range= [0.75,1.25],
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    horizontal_flip=True,
-    zca_epsilon=1e-06,
-    zca_whitening=True)
+    X_train_aug= np.asarray(X_train_aug)
+
+    X_train= np.concatenate((X_train, X_train_aug), axis=0)
+    y_train= np.concatenate((y_train, y_train), axis=0)
+
 
 
     def data_augmentation(img):
@@ -95,8 +90,8 @@ if __name__ == "__main__":
            
         train_dataset = (
             train_dataset
-            .cache()
             .shuffle(10000, reshuffle_each_iteration= True)
+            .cache()
             .batch(BATCH_SIZE)
             .prefetch(AUTOTUNE)
         )
