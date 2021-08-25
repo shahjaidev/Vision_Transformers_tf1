@@ -1,9 +1,16 @@
 # Vision_Transformers_tf1
 
+# To run using Tensorflow-DirectML
+
+    
+    conda create --name directml python=3.6
+    conda activate directml
+    pip install tensorflow-directml
+    
+
 
 # Requirements:
-
-    tensorflow 1.15  :If using CUDA, recommended approach is to install tf2, followed by import tensorflow.compat.v1 as tf, tf.disable_v2_behavior() and tf.enable_eager_execution()
+    tensorflow-directml or tensorflow 1.15  (Note: If using tensorflow 1.15 with CUDA, recommended approach is to install tf2, followed by import tensorflow.compat.v1 as tf, tf.disable_v2_behavior() and tf.enable_eager_execution() )
     sklearn
     numpy
 
@@ -12,6 +19,9 @@
 
 python train_tf1_cifar10_aug.py
 
+
+![Training with tensorflow-directml on a Intel Graphics Card](https://github.com/shahjaidev/Vision_Transformers_tf1/blob/main/vision-transformer/cmd_line_dml.PNG)
+Training with tensorflow-directml on a Intel Graphics Card
 
 # To train on Cifar 100:
 python train_tf1_cifar100_aug.py
