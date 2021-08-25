@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from model_tf1 import VisionTransformer
 import numpy as np
 
-from old_data_augmentations import random_colorization,flip_horizontal, flip_vertical, random_zoom_crop, grayscale, random_jpeg_noise
+from new_data_augmentations import random_hue_saturation, random_brightness_contrast, flip_horizontal, rotate_20, rotate_30, flip_vertical, random_zoom_crop, grayscale, random_jpeg_noise
 
 #from tensorflow.keras.preprocessing.image import random_brightness, random_shift, random_zoom, random_shear, random_rotation
 
@@ -28,8 +28,8 @@ if __name__ == "__main__":
     PATCH_SIZE= 4
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=64
-    NUM_HEADS= 8
-    MLP_DIM_L1= 256
+    NUM_HEADS= 4
+    MLP_DIM_L1= 32
     MLP_DIM_L2= 128
     LEARNING_RATE= 0.001 #3e-4
     BATCH_SIZE= 256
@@ -55,48 +55,31 @@ if __name__ == "__main__":
     y_train= np.concatenate((y_train, y_train), axis=0)
 
 
-
-    def data_augmentation(img):
-        print("img")
-        print(img)
-        #img = tf.keras.preprocessing.image.random_rotation(img, 20, row_axis=0, col_axis=1, channel_axis=2)
-        img = tf.keras.preprocessing.image.random_shear(img, 30, row_axis=0, col_axis=1, channel_axis=2)
-        img = tf.keras.preprocessing.image.random_brightness(img, (0.2, 1.6))
-        img = tf.keras.preprocessing.image.random_zoom(img, (0.75,1.25))
-        img= tf.keras.preprocessing.image.random_shift(img, 0.2, 0.2, row_axis=0, col_axis=1, channel_axis=2,fill_mode='nearest', cval=0.0, interpolation_order=1)
-
-        return img
-
-    #X_train= X_train.astype(np.float32)
-
     train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
-    #train_dataset = train_dataset.batch(16).map(lambda x, y: (data_augmentation(x), y))
-    #train_dataset = train_dataset.map(lambda x, y: (data_augmentation(x), y))
-
     validation_dataset = tf.data.Dataset.from_tensor_slices((X_validate, y_validate))
     test_dataset = tf.data.Dataset.from_tensor_slices((X_test, y_test))
 
     def cast_to_float(x,y):
         return tf.cast(x, tf.float32), tf.cast(y, tf.float32)
+
     train_dataset = train_dataset.map(cast_to_float)
     validation_dataset = validation_dataset.map(cast_to_float)
 
     def get_train_dataset(train_dataset):
-        #train_dataset = train_dataset.map(lambda x, y: (tf.image.per_image_standardization(x), y), num_parallel_calls=AUTOTUNE)
-        augmentations = [random_colorization,flip_horizontal, flip_vertical]
+
+        train_dataset= train_dataset.shuffle(10000, reshuffle_each_iteration= True)
+
+        augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, rotate_20, rotate_30,flip_horizontal, flip_vertical]
         for aug in augmentations:
-            #train_dataset = train_dataset.map(lambda x, y: (tf.image.resize(x, [72,72], method=tf.image.ResizeMethod.BILINEAR), y), num_parallel_calls=AUTOTUNE)
-            train_dataset = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.9, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
+            train_dataset = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.86, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
            
-        train_dataset = (
-            train_dataset
-            .shuffle(10000, reshuffle_each_iteration= True)
-            .cache()
-            .batch(BATCH_SIZE)
-            .prefetch(AUTOTUNE)
-        )
+        train_dataset= train_dataset.cache()
+        train_dataset=train_dataset.batch(BATCH_SIZE)
+        train_dataset=train_dataset.prefetch(AUTOTUNE)
         
         return train_dataset
+
+
 
     validation_dataset = (
         validation_dataset
@@ -127,7 +110,7 @@ if __name__ == "__main__":
         run_eagerly=True,
     )
     
-file_path= './saved_models/Model_tf1_cifar10_aug'
+file_path= './saved_models/Model_tf1_cifar10_aug_rotate'
 checkpoint = ModelCheckpoint(file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
 reduce_on_plateau = ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002)
 callbacks_list = [checkpoint, reduce_on_plateau]

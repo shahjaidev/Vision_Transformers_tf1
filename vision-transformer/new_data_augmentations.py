@@ -13,22 +13,34 @@ def flip_vertical(img):
     img = tf.image.random_flip_up_down(img)
     return img
 
-def random_colorization(img):
+def random_hue_saturation(img):
     img = tf.image.random_hue(img, 0.08)
     img = tf.image.random_saturation(img, 2, 5)
-    img = tf.image.random_brightness(img, 0.3)
-    img = tf.image.random_contrast(img, 0.4, 1.7)
+
     return img
 
+def random_brightness_contrast(img):
+    
+    #Adjusts contrast using a contrast_factor chosen randomly from the range [-0.25,8]
+    img = tf.image.random_contrast(img, 0.25, 0.8)
+
+    # Adjusts brightness using a delta chosen randomly from the range [-0.4,0.4]
+    img = tf.image.random_brightness(img, 0.4)
+    return img
+
+
 def grayscale(img):
+    #Converts RGB images to grayscale but changes channel dimensions to 1. 
     img = tf.image.rgb_to_grayscale(img)
     return img
 
 def rotate_20(img):
-    img= tf.contrib.image.rotate(img, 30 * np.pi / 180, interpolation='BILINEAR')
+    #Rotates image by pi/9 radians , that is, 20 degrees
+    img= tf.contrib.image.rotate(img, 20 * np.pi / 180, interpolation='BILINEAR')
     return img
 
 def rotate_30(img):
+    #Rotates image by pi/6 radians , that is, 30 degrees
     img= tf.contrib.image.rotate(img, 30 * np.pi / 180, interpolation='BILINEAR')
     return img
 
