@@ -25,7 +25,7 @@ if __name__ == "__main__":
     tf.enable_eager_execution()
 
     IMAGE_SIZE= 32
-    NUMBER_OF_CLASSES= 10
+    NUMBER_OF_CLASSES= 100
     PATCH_SIZE= 4
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=64
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     EPOCHS= 100#300
     PATIENCE= 6
 
-    (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar100.load_data()
     X_train, X_validate, y_train, y_validate = train_test_split(X_train, y_train, test_size=0.15, shuffle=True)
     X_train_aug=list()
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         run_eagerly=True,
     )
     
-file_path= './saved_models/Model_tf1_cifar10_aug_rotate'
+file_path= './saved_models/Model_tf1_cifar100_aug_rotate'
 checkpoint = ModelCheckpoint(file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
 reduce_on_plateau = ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002)
 callbacks_list = [checkpoint, reduce_on_plateau]
