@@ -34,5 +34,5 @@ python train_tf1_cifar100_aug.py
     
     
    
-  You can also change the Learning Rate reduction strategy by modifying factor in ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002) in the train-....py files.
+  You can also change the Learning Rate reduction strategy by modifying _factor_ r in ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002) in the train-....py files as well as the _PATIENCE_ hyper-parameter.
 
