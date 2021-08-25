@@ -20,7 +20,6 @@ python train_tf1_cifar100_aug.py
 # Recommended Hyper-parameters:
 
     IMAGE_SIZE= 32
-    
     NUMBER_OF_CLASSES= 10
     PATCH_SIZE= 4
     NUMBER_OF_LAYERS=8
