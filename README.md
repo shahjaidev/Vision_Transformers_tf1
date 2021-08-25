@@ -20,8 +20,8 @@
 python train_tf1_cifar10_aug.py
 
 
-![Training with tensorflow-directml on a Intel Graphics Card](https://github.com/shahjaidev/Vision_Transformers_tf1/blob/main/vision-transformer/cmd_line_dml.PNG)
-Training with tensorflow-directml on a Intel Graphics Card
+![Training with tensorflow-directml on an Intel Graphics Card](https://github.com/shahjaidev/Vision_Transformers_tf1/blob/main/vision-transformer/cmd_line_dml.PNG)
+Training with tensorflow-directml on an Intel Graphics Card
 
 # To train on Cifar 100:
 python train_tf1_cifar100_aug.py
