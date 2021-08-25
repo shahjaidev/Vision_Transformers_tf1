@@ -1,8 +1,7 @@
 import os
 from argparse import ArgumentParser
-#import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
-import tensorflow as tf
 import os
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
