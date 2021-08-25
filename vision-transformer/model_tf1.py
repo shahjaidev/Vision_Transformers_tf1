@@ -1,12 +1,13 @@
 import tensorflow.compat.v1 as tf
+tf.enable_eager_execution()
+
+
 from tensorflow.keras.layers import (
     Dense,
     Dropout,
     LayerNormalization,
 )
 #from tensorflow.keras.layers.experimental.preprocessing import Rescaling
-tf.disable_v2_behavior()
-tf.enable_eager_execution()
 
 def Rescale(input, scale, offset=0):
     dtype = tf.float32
