@@ -18,7 +18,9 @@ from new_data_augmentations import random_hue_saturation, random_brightness_cont
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Set GPU Device
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+os.environ["DML_VISIBLE_DEVICES"] = "1"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     
