@@ -1,7 +1,5 @@
-import tensorflow as tf
-
-#import tensorflow.compat.v1 as tf
-#tf.disable_v2_behavior()
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 tf.enable_eager_execution()
 
 import numpy as np

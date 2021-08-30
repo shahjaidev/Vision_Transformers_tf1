@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 from argparse import ArgumentParser
 import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -7,34 +8,33 @@ from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from model_tf1 import VisionTransformer
+from model_tf1_jaidev import VisionTransformer
 import numpy as np
 
 from new_data_augmentations import random_hue_saturation, random_brightness_contrast, flip_horizontal, rotate_20, rotate_30, flip_vertical, random_zoom_crop, grayscale, random_jpeg_noise
 
-#from tensorflow.keras.preprocessing.image import random_brightness, random_shift, random_zoom, random_shear, random_rotation
-
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Run on GPU0
-os.environ["DML_VISIBLE_DEVICES"] = "0"
+#os.environ["DML_VISIBLE_DEVICES"] = "0"
+
 
 if __name__ == "__main__":
     
-    tf.debugging.set_log_device_placement(True) 
+    #tf.debugging.set_log_device_placement(True) 
     tf.enable_eager_execution() 
 
     IMAGE_SIZE= 32
     NUMBER_OF_CLASSES= 10
     PATCH_SIZE= 4
+    PATCH_STRIDE=4
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=64
     NUM_HEADS= 4
-    MLP_DIM_L1= 32
-    MLP_DIM_L2= 128
+    MLP_HIDDEN_DIM= 128
     LEARNING_RATE= 0.001 #3e-4
-    BATCH_SIZE= 256
-    EPOCHS= 100#300
+    BATCH_SIZE= 512
+    EPOCHS= 300
     PATIENCE= 6
 
     (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
@@ -47,8 +47,6 @@ if __name__ == "__main__":
         img_aug = tf.keras.preprocessing.image.random_shear(img, 25, row_axis=0, col_axis=1, channel_axis=2)
         X_train_aug.append(img_aug)
 
-
-    #print(X_train_aug)
 
     X_train_aug= np.asarray(X_train_aug)
 
@@ -70,7 +68,7 @@ if __name__ == "__main__":
 
         train_dataset= train_dataset.shuffle(10000, reshuffle_each_iteration= True)
 
-        augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, rotate_20, rotate_30,flip_horizontal, flip_vertical]
+        augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, flip_horizontal, flip_vertical]
         for aug in augmentations:
             train_dataset = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.86, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
            
@@ -92,15 +90,12 @@ if __name__ == "__main__":
     model = VisionTransformer(
         image_size= IMAGE_SIZE,
         patch_size=PATCH_SIZE,
-        patch_stride= PATCH_SIZE,
+        patch_stride=PATCH_STRIDE,
         num_layers=NUMBER_OF_LAYERS,
         num_classes=NUMBER_OF_CLASSES,
         embedding_dim=EMBEDDING_DIM,
         num_heads=NUM_HEADS,
-        mlp_dim_l1=MLP_DIM_L1,
-        mlp_dim_l2=MLP_DIM_L2,
-        channels=3,
-        dropout=0.25,
+        mlp_hidden_dim=MLP_HIDDEN_DIM,
     )
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -126,5 +121,5 @@ model.fit(
 
 #Compute Metrics on Test Set
 
-test_metrics= model.evaluate(X_test, y_test, 32)
+test_metrics= model.evaluate(X_test, y_test, 128)
 print(test_metrics)
