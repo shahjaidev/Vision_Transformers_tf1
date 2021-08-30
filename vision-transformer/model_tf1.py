@@ -1,4 +1,5 @@
 import tensorflow.compat.v1 as tf
+from MHA import MultiHeadSelfAttention
 tf.enable_eager_execution()
 
 
@@ -62,10 +63,9 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
         output = self.combine_heads(concat_attention)
         return output
 
-
-class TransformerBlock(tf.keras.layers.Layer):
+class TransformerEncoder(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads, mlp_dim_l2, dropout=0.1):
-        super(TransformerBlock, self).__init__()
+        super(TransformerEncoder, self).__init__()
         self.att = MultiHeadSelfAttention(embed_dim, num_heads)
         self.mlp = tf.keras.Sequential(
             [   Dense(mlp_dim_l2, activation=gelu ),
