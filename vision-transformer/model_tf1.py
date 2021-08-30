@@ -1,13 +1,6 @@
 import tensorflow.compat.v1 as tf
-from MHA import MultiHeadSelfAttention
 tf.enable_eager_execution()
 
-
-from tensorflow.keras.layers import (
-    Dense,
-    Dropout,
-    LayerNormalization,
-)
 
 def Rescale(input, scale, offset=0):
     """Rescaling helper function to scale image elements down to the range [0,1]"""
@@ -40,10 +33,10 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
                 f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
             )
         self.projection_dim = embed_dim // num_heads
-        self.query_dense = Dense(embed_dim)
-        self.key_dense = Dense(embed_dim)
-        self.value_dense = Dense(embed_dim)
-        self.combine_heads = Dense(embed_dim)
+        self.query_dense = tf.keras.layers.Dense(embed_dim)
+        self.key_dense = tf.keras.layers.Dense(embed_dim)
+        self.value_dense = tf.keras.layers.Dense(embed_dim)
+        self.combine_heads = tf.keras.layers.Dense(embed_dim)
 
     def attention(self, query, key, value):
         score = tf.matmul(query, key, transpose_b=True)
@@ -72,21 +65,21 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
         output = self.combine_heads(concat_attention)
         return output
 
-class TransformerEncoder(tf.keras.layers.Layer):
+class TransformerEncoderBlock(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads, mlp_dim_l2, dropout=0.1):
-        super(TransformerEncoder, self).__init__()
+        super(TransformerEncoderBlock, self).__init__()
         self.att = MultiHeadSelfAttention(embed_dim, num_heads)
         self.mlp = tf.keras.Sequential(
-            [   Dense(mlp_dim_l2, activation=gelu ),
-                Dropout(dropout),
-                Dense(embed_dim),
-                Dropout(dropout), 
+            [   tf.keras.layers.Dense(mlp_dim_l2, activation=gelu ),
+                tf.keras.layers.Dropout(dropout),
+                tf.keras.layers.Dense(embed_dim),
+                tf.keras.layers.Dropout(dropout), 
             ]
         )
-        self.layernorm1 = LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = LayerNormalization(epsilon=1e-6)
-        self.dropout1 = Dropout(dropout)
-        self.dropout2 = Dropout(dropout)
+        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
 
     def call(self, inputs, training):
         inputs_norm = self.layernorm1(inputs)
@@ -112,8 +105,7 @@ class VisionTransformer(tf.keras.Model):
         num_classes,
         embedding_dim,
         num_heads,
-        mlp_dim_l1,
-        mlp_dim_l2,
+        mlp_hidden_dim,
         channels=3,
         dropout=0.1,
     ):
@@ -133,15 +125,13 @@ class VisionTransformer(tf.keras.Model):
 
         #Adding learnable classification embedding weights to the model class
         self.class_emb = self.add_weight("class_emb", shape=(1, 1, embedding_dim))
-        self.patch_proj = Dense(embedding_dim)
-        self.enc_layers = [TransformerBlock(embedding_dim, num_heads, mlp_dim_l2, dropout) for _ in range(num_layers)]
+        self.patch_proj = tf.keras.layers.Dense(embedding_dim)
+        self.enc_layers = [TransformerEncoderBlock(embedding_dim, num_heads, mlp_hidden_dim, dropout) for _ in range(num_layers)]
         self.mlp_head = tf.keras.Sequential(
             [
-                LayerNormalization(epsilon=1e-6),
-                Dense(mlp_dim_l1, activation=gelu),
-                Dropout(dropout),
-                Dense(mlp_dim_l2, activation=gelu),
-                Dense(num_classes),
+                tf.keras.layers.LayerNormalization(epsilon=1e-6),
+                tf.keras.layers.Dense(mlp_hidden_dim, activation=gelu),
+                tf.keras.layers.Dense(num_classes),
             ]
         )
 

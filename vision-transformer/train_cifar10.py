@@ -16,8 +16,8 @@ from new_data_augmentations import random_hue_saturation, random_brightness_cont
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Run on GPU0
-#os.environ["DML_VISIBLE_DEVICES"] = "0"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["DML_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     
@@ -29,12 +29,12 @@ if __name__ == "__main__":
     PATCH_SIZE= 4
     PATCH_STRIDE=4
     NUMBER_OF_LAYERS=8
-    EMBEDDING_DIM=128
+    EMBEDDING_DIM=64
     NUM_HEADS= 8
     MLP_HIDDEN_DIM= 256
     LEARNING_RATE= 0.001 #3e-4
-    BATCH_SIZE= 256
-    EPOCHS= 300
+    BATCH_SIZE= 512
+    EPOCHS= 100
     PATIENCE= 10
 
     (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
@@ -44,15 +44,13 @@ if __name__ == "__main__":
     X_train_aug=list()
     for img in X_train:
         img_aug = tf.keras.preprocessing.image.random_rotation(img, 20, row_axis=0, col_axis=1, channel_axis=2)
+        X_train_aug.append(img_aug)
         img_aug = tf.keras.preprocessing.image.random_shear(img, 25, row_axis=0, col_axis=1, channel_axis=2)
         X_train_aug.append(img_aug)
 
-
     X_train_aug= np.asarray(X_train_aug)
-
-    X_train= np.concatenate((X_train, X_train_aug), axis=0)
-    y_train= np.concatenate((y_train, y_train), axis=0)
-
+    #X_train= np.concatenate((X_train, X_train_aug), axis=0)
+    #y_train= np.concatenate((y_train, y_train, y_train), axis=0)
 
     train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
     validation_dataset = tf.data.Dataset.from_tensor_slices((X_validate, y_validate))
@@ -65,13 +63,13 @@ if __name__ == "__main__":
     validation_dataset = validation_dataset.map(cast_to_float)
 
     def get_train_dataset(train_dataset):
+        augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, flip_vertical]
+        for aug in augmentations:
+            train_dataset_aug = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.5, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
+        
+        train_dataset= train_dataset.concatenate(train_dataset_aug)
 
         train_dataset= train_dataset.shuffle(10000, reshuffle_each_iteration= True)
-
-        augmentations = [random_hue_saturation, random_brightness_contrast, flip_horizontal, flip_horizontal, flip_vertical]
-        for aug in augmentations:
-            train_dataset = train_dataset.map(lambda x, y: (tf.cond(tf.random_uniform([], 0, 1) > 0.86, lambda: aug(x), lambda: x), y), num_parallel_calls=AUTOTUNE)
-           
         train_dataset= train_dataset.cache()
         train_dataset=train_dataset.batch(BATCH_SIZE)
         train_dataset=train_dataset.prefetch(AUTOTUNE)

@@ -1,12 +1,6 @@
 import tensorflow.compat.v1 as tf
 tf.enable_eager_execution()
-from multiheadattention import MultiHeadSelfAttention
-
-from tensorflow.keras.layers import (
-    Dense,
-    Dropout,
-    LayerNormalization,
-)
+from MHA import MultiHeadSelfAttention
 
 def Rescale(input, scale, offset=0):
     """Rescaling helper function to scale image elements down to the range [0,1]"""
@@ -23,26 +17,26 @@ def gelu(x):
 
 def MLP(hidden_dim, embed_dim, rate=0.2):
     model=tf.keras.Sequential(
-            [   Dense(hidden_dim, activation=gelu),
-                Dropout(rate),
-                Dense(embed_dim, activation=gelu)
+            [   tf.keras.layers.Dense(hidden_dim, activation=gelu),
+                tf.keras.layers.Dropout(rate),
+                tf.keras.layers.Dense(embed_dim, activation=gelu)
             ]
         )
     return model
 
-class TransformerEncoder(tf.keras.layers.Layer):
+class TransformerEncoderBlock(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads, mlp_hidden_dim):
-        super(TransformerEncoder, self).__init__()
+        super(TransformerEncoderBlock, self).__init__()
         self.mlp = MLP(mlp_hidden_dim, embed_dim,0.2)
         self.MHA_layer = MultiHeadSelfAttention(embed_dim, num_heads)
-        self.layernorm1 = LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = LayerNormalization(epsilon=1e-6)
-        self.dropout1 = Dropout(0.2)
-        self.dropout2 = Dropout(0.2)
+        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = tf.keras.layers.Dropout(0.2)
+        self.dropout2 = tf.keras.layers.Dropout(0.2)
 
     def call(self, input_embeddings, training=True):
-        output = self.MHA_layer(input_embeddings)
-        output = self.layernorm1(output)
+        input_embeddings_norm = self.layernorm1(input_embeddings)
+        output = self.MHA_layer(input_embeddings_norm)
         output = self.dropout1(output, training=training)
         output_1 = output + input_embeddings
         #Skip Connection: Adding input_embeddings to the output 
@@ -84,7 +78,7 @@ class PatchExtractEncoder(tf.keras.layers.Layer):
         
         classification_emb = tf.broadcast_to( self.classification_emb, [batch_size, 1, self.patch_embedding_dim])
         positions = tf.range(start=0, limit=self.num_patches+1, delta=1)
-
+        
         proj_patches = self.projection(patches) 
         proj_patches = tf.concat([classification_emb, proj_patches], axis=1)
 
@@ -114,20 +108,20 @@ class VisionTransformer(tf.keras.Model):
         #Adding learnable classification embedding weights to the model class
 
         self.PatchExtractEncoder= PatchExtractEncoder(num_patches,embedding_dim, patch_size, patch_stride)
-        self.transformer_layers = [TransformerEncoder(embedding_dim, num_heads, mlp_hidden_dim) for i in range(self.num_stacked_layers)]
+        self.transformer_layers = [TransformerEncoderBlock(embedding_dim, num_heads, mlp_hidden_dim) for i in range(self.num_stacked_layers)]
         self.layernorm= tf.keras.layers.LayerNormalization(epsilon=1e-6)
 
         self.classifier = tf.keras.Sequential(
             [
-                Dense(1024, activation=gelu),
-                Dropout(0.2),
-                Dense(512, activation=gelu),
-                Dropout(0.2),
-                Dense(num_classes),
+                tf.keras.layers.Dense(512, activation=gelu),
+                tf.keras.layers.Dropout(0.2),
+                tf.keras.layers.Dense(256, activation=gelu),
+                tf.keras.layers.Dropout(0.2),
+                tf.keras.layers.Dense(num_classes),
             ]
         )
         self.flatten= tf.keras.layers.Flatten()
-        self.dropout= tf.keras.layers.Dropout(0.2)
+        self.dropout= tf.keras.layers.Dropout(0.5)
 
     def call(self, images, training=True):
         batch_size = tf.shape(images)[0]
@@ -137,8 +131,8 @@ class VisionTransformer(tf.keras.Model):
          #Extract patches using specified patch_size and patch_stride parameters, and return flatten patches of shape [batch_size, number of patches, self.patch_dim], Flattened Patches are projected down to (embedding_dim) sized embeddings
         x = self.PatchExtractEncoder(images)
 
-        for transformer_encoder in self.transformer_layers:
-            x = transformer_encoder(x, training)
+        for transformer_encoder_block in self.transformer_layers:
+            x = transformer_encoder_block(x, training)
 
         x = self.layernorm(x)
         x = self.flatten(x)
