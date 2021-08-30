@@ -126,7 +126,8 @@ class VisionTransformer(tf.keras.Model):
                 Dense(num_classes),
             ]
         )
-        
+        self.flatten= tf.keras.layers.Flatten()
+        self.dropout= tf.keras.layers.Dropout(0.2)
 
     def call(self, images, training=True):
         batch_size = tf.shape(images)[0]
@@ -139,5 +140,10 @@ class VisionTransformer(tf.keras.Model):
         for transformer_encoder in self.transformer_layers:
             x = transformer_encoder(x, training)
 
-        res = self.classifier(x[:, 0])
+        x = self.layernorm(x)
+        x = self.flatten(x)
+        x = self.dropout(x)
+        res = self.classifier(x)
+
+        #res = self.classifier(x[:, 0])
         return res

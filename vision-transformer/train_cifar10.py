@@ -17,7 +17,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Run on GPU0
 #os.environ["DML_VISIBLE_DEVICES"] = "0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     NUMBER_OF_LAYERS=8
     EMBEDDING_DIM=128
     NUM_HEADS= 8
-    MLP_HIDDEN_DIM= 512
+    MLP_HIDDEN_DIM= 256
     LEARNING_RATE= 0.001 #3e-4
     BATCH_SIZE= 256
     EPOCHS= 300
@@ -78,16 +78,6 @@ if __name__ == "__main__":
         
         return train_dataset
 
-
-    """
-    validation_dataset = (
-        validation_dataset
-        .cache()
-        .batch(BATCH_SIZE)
-        .prefetch(AUTOTUNE)
-    )
-    """
-
     model = VisionTransformer(
         image_size= IMAGE_SIZE,
         patch_size=PATCH_SIZE,
@@ -107,7 +97,7 @@ if __name__ == "__main__":
         ],
     )
     
-file_path= './saved_models/Model_tf1_cifar10_aug_rotate'
+file_path= './saved_models/Model_tf1_cifar10_with_data_augmentation'
 checkpoint = ModelCheckpoint(file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
 reduce_on_plateau = ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002)
 callbacks_list = [checkpoint, reduce_on_plateau]
