@@ -9,7 +9,7 @@ from tensorflow.keras.layers import (
 )
 
 
-class MultiHeadSelfAttention(keras.layers.Layer):
+class MultiHeadSelfAttention(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads=8):
         super(MultiHeadSelfAttention, self).__init__()
         self.embed_dim = embed_dim

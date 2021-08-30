@@ -1,6 +1,6 @@
 import tensorflow.compat.v1 as tf
 tf.enable_eager_execution()
-from MHA import MultiHeadSelfAttention
+from multiheadattention import MultiHeadSelfAttention
 
 from tensorflow.keras.layers import (
     Dense,
@@ -37,7 +37,7 @@ class TransformerEncoder(tf.keras.layers.Layer):
         self.MHA_layer = MultiHeadSelfAttention(embed_dim, num_heads)
         self.layernorm1 = LayerNormalization(epsilon=1e-6)
         self.layernorm2 = LayerNormalization(epsilon=1e-6)
-        self.dropout1 = Dropout(0.5)
+        self.dropout1 = Dropout(0.2)
         self.dropout2 = Dropout(0.2)
 
     def call(self, input_embeddings, training=True):
@@ -48,21 +48,22 @@ class TransformerEncoder(tf.keras.layers.Layer):
         #Skip Connection: Adding input_embeddings to the output 
 
         output_norm = self.layernorm2(output_1)
-        MLP_output = self.mlp(output)
+        MLP_output = self.mlp(output_norm)
         MLP_output = self.dropout2(MLP_output, training=training)
         return MLP_output + output_1 
         #Skip Connection: Adding output_1 to the final output MLP_output 
 
 class PatchExtractEncoder(tf.keras.layers.Layer):
-    def __init__(self, num_patches, projection_dim, patch_size, patch_stride):
+    def __init__(self, num_patches, patch_embedding_dim, patch_size, patch_stride):
         super(PatchExtractEncoder, self).__init__()
         self.patch_size= patch_size
         self.patch_stride= patch_stride
         self.num_patches = num_patches
-        self.projection = tf.keras.layers.Dense(units=projection_dim)
-        self.position_embedding = tf.keras.layers.Embedding(
-            input_dim=num_patches, output_dim=projection_dim
-        )
+        self.classification_emb = self.add_weight("class_emb", shape=(1, 1, patch_embedding_dim))
+        self.projection = tf.keras.layers.Dense(patch_embedding_dim)
+        self.patch_embedding_dim=patch_embedding_dim
+        #We define a Keras embedding layer to serve as a position number-> position embedding transformation 
+        self.position_embedding = tf.keras.layers.Embedding(input_dim=num_patches+1, output_dim=patch_embedding_dim)
 
     def get_patches(self, images):
         batch_size = tf.shape(images)[0]
@@ -78,11 +79,17 @@ class PatchExtractEncoder(tf.keras.layers.Layer):
         return patches
 
     def call(self, images):
+        batch_size = tf.shape(images)[0]
         patches = self.get_patches(images)
-        positions = tf.range(start=0, limit=self.num_patches, delta=1)
+        
+        classification_emb = tf.broadcast_to( self.classification_emb, [batch_size, 1, self.patch_embedding_dim])
+        positions = tf.range(start=0, limit=self.num_patches+1, delta=1)
 
-        #Adding learnable Positional Encoding embedding weights to the model class. A positional embedding learns to represent the position of each specific patch number of the image
-        proj_patches = self.projection(patches) + self.position_embedding(positions)
+        proj_patches = self.projection(patches) 
+        proj_patches = tf.concat([classification_emb, proj_patches], axis=1)
+
+        #Adding learnable Positional Encodings
+        proj_patches += self.position_embedding(positions)
         return proj_patches
 
 class VisionTransformer(tf.keras.Model):
@@ -104,18 +111,18 @@ class VisionTransformer(tf.keras.Model):
         #Flatting the path results in a path_dim dimensional vector. For patch_size =4, this is 4*4*3 = 48 dimensional
         self.embedding_dim = embedding_dim
         self.num_stacked_layers = num_layers
+        #Adding learnable classification embedding weights to the model class
 
         self.PatchExtractEncoder= PatchExtractEncoder(num_patches,embedding_dim, patch_size, patch_stride)
-        self.transformer_layers = [TransformerEncoder(embedding_dim, num_heads, mlp_hidden_dim) for _ in range(self.num_stacked_layers)]
+        self.transformer_layers = [TransformerEncoder(embedding_dim, num_heads, mlp_hidden_dim) for i in range(self.num_stacked_layers)]
         self.layernorm= tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.flatten= tf.keras.layers.Flatten()
 
         self.classifier = tf.keras.Sequential(
             [
+                Dense(1024, activation=gelu),
+                Dropout(0.2),
                 Dense(512, activation=gelu),
-                Dropout(0.3),
-                Dense(32, activation=gelu),
-                Dropout(0.4),
+                Dropout(0.2),
                 Dense(num_classes),
             ]
         )
@@ -132,6 +139,5 @@ class VisionTransformer(tf.keras.Model):
         for transformer_encoder in self.transformer_layers:
             x = transformer_encoder(x, training)
 
-        x = self.layernorm(x)
-        x = self.classifier(x[:, 0])
-        return x
+        res = self.classifier(x[:, 0])
+        return res

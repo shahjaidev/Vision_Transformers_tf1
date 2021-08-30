@@ -17,7 +17,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Run on GPU0
 #os.environ["DML_VISIBLE_DEVICES"] = "0"
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 if __name__ == "__main__":
     
@@ -29,13 +29,13 @@ if __name__ == "__main__":
     PATCH_SIZE= 4
     PATCH_STRIDE=4
     NUMBER_OF_LAYERS=8
-    EMBEDDING_DIM=64
-    NUM_HEADS= 4
-    MLP_HIDDEN_DIM= 128
+    EMBEDDING_DIM=128
+    NUM_HEADS= 8
+    MLP_HIDDEN_DIM= 512
     LEARNING_RATE= 0.001 #3e-4
-    BATCH_SIZE= 512
+    BATCH_SIZE= 256
     EPOCHS= 300
-    PATIENCE= 6
+    PATIENCE= 10
 
     (X_train, y_train) , (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
     X_train, X_validate, y_train, y_validate = train_test_split(X_train, y_train, test_size=0.15, shuffle=True)
@@ -79,13 +79,14 @@ if __name__ == "__main__":
         return train_dataset
 
 
-
+    """
     validation_dataset = (
         validation_dataset
         .cache()
         .batch(BATCH_SIZE)
         .prefetch(AUTOTUNE)
     )
+    """
 
     model = VisionTransformer(
         image_size= IMAGE_SIZE,
@@ -104,22 +105,21 @@ if __name__ == "__main__":
         tf.keras.metrics.SparseCategoricalAccuracy(name="Top-1-accuracy"),
         tf.keras.metrics.SparseTopKCategoricalAccuracy(3, name="Top-3-accuracy"),
         ],
-        run_eagerly=True,
     )
     
 file_path= './saved_models/Model_tf1_cifar10_aug_rotate'
 checkpoint = ModelCheckpoint(file_path, monitor='val_Top-1-accuracy', verbose=1, save_best_only=True, mode='max')
 reduce_on_plateau = ReduceLROnPlateau(monitor="val_Top-1-accuracy", mode="max", factor=0.5, patience=PATIENCE, verbose=1,min_lr=0.00002)
 callbacks_list = [checkpoint, reduce_on_plateau]
-                 
+
+
 model.fit(
     get_train_dataset(train_dataset),
-    validation_data=validation_dataset,
+    validation_data=(X_validate,y_validate),
     epochs=EPOCHS,
     callbacks=callbacks_list,
 )
 
 #Compute Metrics on Test Set
-
 test_metrics= model.evaluate(X_test, y_test, 128)
 print(test_metrics)

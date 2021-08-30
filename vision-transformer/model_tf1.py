@@ -21,6 +21,15 @@ def gelu(x):
 
     return 0.5 * x * (1.0 + tf.math.erf(x / tf.cast(tf.sqrt(2.0), x.dtype)))
 
+def _gelu_smooth(x):
+    x = tf.convert_to_tensor(x)
+    pi = tf.cast(math.pi, x.dtype)
+    coeff = tf.cast(0.044715, x.dtype)
+    cdf = 0.5 * (1.0 + tf.tanh(tf.sqrt(2.0 / pi) * (x + coeff * tf.pow(x, 3))))
+
+    return x * cdf
+
+
 class MultiHeadSelfAttention(tf.keras.layers.Layer):
     def __init__(self, embed_dim, num_heads=8):
         super(MultiHeadSelfAttention, self).__init__()

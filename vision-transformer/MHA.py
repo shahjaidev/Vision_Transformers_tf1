@@ -2,19 +2,19 @@ import tensorflow.compat.v1 as tf
 tf.enable_eager_execution()
 
 class MultiHeadSelfAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, embed_dim, num_heads):
         super(MultiHeadSelfAttention, self).__init__()
         self.num_heads = num_heads
-        self.d_model = d_model
+        self.embed_dim = embed_dim
 
-        assert d_model % self.num_heads == 0
+        assert embed_dim % self.num_heads == 0
 
-        self.depth = d_model // self.num_heads
+        self.depth = embed_dim // self.num_heads
 
-        self.wq = tf.keras.layers.Dense(d_model)
-        self.wk = tf.keras.layers.Dense(d_model)
-        self.wv = tf.keras.layers.Dense(d_model)
-        self.dense = tf.keras.layers.Dense(d_model)
+        self.wq = tf.keras.layers.Dense(embed_dim)
+        self.wk = tf.keras.layers.Dense(embed_dim)
+        self.wv = tf.keras.layers.Dense(embed_dim)
+        self.dense = tf.keras.layers.Dense(embed_dim)
 
     def split_heads(self, x, batch_size):
         """
@@ -48,7 +48,7 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
 
         scaled_attention = tf.transpose(scaled_attention, perm=[0, 2, 1, 3])  # (batch_size, seq_len_q, num_heads, depth)
 
-        concat_attention = tf.reshape(scaled_attention,(batch_size, -1, self.d_model))  # (batch_size, seq_len_q, d_model)
+        concat_attention = tf.reshape(scaled_attention,(batch_size, -1, self.embed_dim))  # (batch_size, seq_len_q, d_model)
 
         output = self.dense(concat_attention)  # (batch_size, seq_len_q, d_model)
 
